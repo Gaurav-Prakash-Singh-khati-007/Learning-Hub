@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Learning Platform</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Courier New", monospace;
+        background-color: #f0f9f9;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      #top-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #ffffff;
+        padding: 15px;
+        border-bottom: 4px solid #4a90e2;
+        flex-shrink: 0;
+      }
+      #logo {
+        font-size: 20px;
+        font-weight: bold;
+        color: #4a90e2;
+      }
+      #home {
+        font-size: 16px;
+        font-weight: bold;
+        color: #333;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      #main-content {
+        display: flex;
+        flex: 1;
+        height: 100%;
+        overflow: hidden;
+      }
+      #sidebar {
+        width: 250px;
+        background-color: #e8f4fd;
+        padding: 15px;
+        border-right: 4px solid #4a90e2;
+        overflow-y: auto;
+      }
+      #content {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #ffffff;
+        height: 100%;
+        overflow: hidden;
+      }
+      .folder {
+        font-size: 16px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        padding: 8px;
+        background-color: #d0e7ff;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+      .folder:hover {
+        background-color: #b8d9ff;
+      }
+      .file-container {
+        padding-left: 15px;
+      }
+      .file {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      .file:hover {
+        background-color: #f0f0f0;
+      }
+      input[type="checkbox"] {
+        margin-right: 8px;
+      }
+      .video-container,
+      iframe,
+      .html-content {
+        width: 100%;
+        height: 100%;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="top-section">
+      <div id="logo">Learning Hub</div>
+      <a href="../mainpage.html" id="home">Home</a>
+    </div>
+
+    <div id="main-content">
+      <div id="sidebar"></div>
+      <div id="content"></div>
+    </div>
+
+    <script>
+      const sidebar = document.getElementById("sidebar");
+      const content = document.getElementById("content");
+
+      async function fetchFiles() {
+        try {
+          const response = await fetch("./ccnaCourseContent.json");
+          const sections = await response.json();
+          renderSidebar(sections);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        }
+      }
+
+      function renderSidebar(sections) {
+        sidebar.innerHTML = "";
+        sections.forEach((section) => {
+          const folderDiv = document.createElement("div");
+          folderDiv.className = "folder";
+          folderDiv.innerText = section.name;
+          folderDiv.onclick = () => toggleFiles(folderDiv, section.files);
+          sidebar.appendChild(folderDiv);
+        });
+      }
+
+      function toggleFiles(folderDiv, files) {
+        const existingFiles = folderDiv.nextElementSibling;
+        if (
+          existingFiles &&
+          existingFiles.classList.contains("file-container")
+        ) {
+          existingFiles.remove();
+          return;
+        }
+
+        const fileContainer = document.createElement("div");
+        fileContainer.className = "file-container";
+        files.forEach((file) => {
+          const fileDiv = document.createElement("div");
+          fileDiv.className = "file";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = getWatchedStatus(file.name);
+          checkbox.onclick = (event) => {
+            event.stopPropagation();
+            toggleWatchedStatus(file, checkbox);
+          };
+
+          const fileName = document.createElement("span");
+          fileName.innerText = file.name;
+
+          fileDiv.appendChild(checkbox);
+          fileDiv.appendChild(fileName);
+          fileDiv.onclick = () => displayFile(file);
+          fileContainer.appendChild(fileDiv);
+        });
+        folderDiv.insertAdjacentElement("afterend", fileContainer);
+      }
+
+      function toggleWatchedStatus(file, checkbox) {
+        file.watched = checkbox.checked;
+        saveWatchedStatus(file.name, checkbox.checked);
+      }
+
+      function saveWatchedStatus(fileName, status) {
+        localStorage.setItem(fileName, status);
+      }
+
+      function getWatchedStatus(fileName) {
+        return localStorage.getItem(fileName) === "true";
+      }
+
+      function displayFile(file) {
+        content.innerHTML = "";
+
+        if (file.path.endsWith(".mp4")) {
+          // Video Files
+          const videoContainer = document.createElement("div");
+          videoContainer.className = "video-container";
+
+          const videoPlayer = document.createElement("video");
+          videoPlayer.controls = true;
+          videoPlayer.src = encodeURI(file.path);
+
+          videoContainer.appendChild(videoPlayer);
+          content.appendChild(videoContainer);
+        } else if (file.path.endsWith(".pdf")) {
+          // PDF Files
+          const iframe = document.createElement("iframe");
+          iframe.src = encodeURI(file.path);
+          content.appendChild(iframe);
+        } else if (file.path.endsWith(".html")) {
+          // HTML Files
+          fetch(file.path)
+            .then((response) => response.text())
+            .then((html) => {
+              const htmlContainer = document.createElement("div");
+              htmlContainer.className = "html-content";
+              htmlContainer.innerHTML = html;
+              content.appendChild(htmlContainer);
+            })
+            .catch((error) => {
+              content.innerHTML = `<p>Error loading HTML file: ${error.message}</p>`;
+            });
+        } else {
+          content.innerHTML = `<p>Unsupported file type: ${file.path}</p>`;
+        }
+      }
+
+      fetchFiles();
+    </script>
+  </body>
+</html>
