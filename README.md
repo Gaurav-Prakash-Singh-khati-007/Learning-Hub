@@ -1,115 +1,165 @@
-# Learning-Hub
-Frontend only for LMS simple clean easy 
-# Electron.js Player Setup
+# 🚀 Electron Course App
 
-## Prerequisites
-Make sure you have the following installed on your system:
+This is an **Electron.js app** that loads courses dynamically from `config.json`. Clicking on a thumbnail opens a new course page.
 
-- [Node.js](https://nodejs.org/) (Latest LTS version recommended)
-- npm (comes with Node.js) or Yarn
-- Git (optional, for cloning repositories)
+---
 
-## Installation
+## 📁 Project Structure
 
-1. Clone the repository (if using Git):
-   ```sh
-   git clone <repository-url>
-   cd <project-directory>
-   ```
-
-2. Install Electron.js globally (if not installed):
-   ```sh
-   npm install -g electron
-   ```
-
-3. Install project dependencies:
-   ```sh
-   npm install
-   ```
-   or using Yarn:
-   ```sh
-   yarn install
-   ```
-
-## Project Structure
 ```
-/project-directory
-│── config.json  # Configuration file containing relative path to mainpage.html
-│── mainpage.html  # Main HTML file with thumbnails and course links
-│── index.js  # Electron main process
-│── package.json  # Project metadata and dependencies
-│── assets/  # Additional assets (thumbnails, images, etc.)
-│── courses/  # Course-specific HTML files
+📂 YourProject
+│── 📂 assets
+│   ├── 🖼️ thumbnail.png
+│   ├── 🖼️ icon.png
+│── 📂 pages
+│   ├── 📄 course1.html
+│   ├── 📄 course2.html
+│── 📂 scripts
+│   ├── 📄 preload.js
+│── 📄 main.js
+│── 📄 mainpage.html
+│── 📄 config.json
+│── 📄 package.json
 ```
 
-## Running the Electron.js App
+---
 
-Start the Electron.js app:
+## 🚀 Installation Guide
+
+### 1️⃣ Install Node.js (If Not Installed)
+- Download and install **Node.js** from [nodejs.org](https://nodejs.org/)
+- Verify installation:
+  ```sh
+  node -v
+  npm -v
+  ```
+
+### 2️⃣ Clone the Repository
 ```sh
-npm start
+git clone https://github.com/yourusername/your-electron-app.git
+cd your-electron-app
 ```
-Or manually using:
+
+### 3️⃣ Install Dependencies
+```sh
+npm install
+```
+
+### 4️⃣ Run the App
+```sh
+npx electron .
+```
+OR  
 ```sh
 electron .
 ```
 
-## Config File (config.json)
-The `config.json` file should include the relative path to `mainpage.html`:
+---
+
+## 📜 config.json (Dynamic HTML Loader)
+
 ```json
 {
-  "mainPage": "./mainpage.html"
+  "mainPage": "mainpage.html"
 }
 ```
 
-## Handling Course Clicks
-The `mainpage.html` file should contain thumbnails that, when clicked, open course-specific HTML pages:
-```html
-<a href="courses/course1.html" target="_blank">
-    <img src="assets/thumbnail1.png" alt="Course 1">
-</a>
+---
+
+## 📄 main.js (Electron Main File)
+
+```javascript
+const { app, BrowserWindow, Tray, Menu } = require("electron");
+const path = require("path");
+const fs = require("fs");
+
+let mainWindow;
+let tray = null;
+
+// Load config
+const configPath = path.join(app.getPath("userData"), "config.json");
+if (!fs.existsSync(configPath)) {
+  fs.writeFileSync(configPath, JSON.stringify({ mainPage: "mainpage.html" }, null, 2));
+}
+const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+
+app.whenReady().then(() => {
+  createMainWindow();
+  
+  tray = new Tray(path.join(__dirname, "assets/icon.png"));
+  const trayMenu = Menu.buildFromTemplate([
+    { label: "Show App", click: () => mainWindow.show() },
+    { label: "Quit", role: "quit" },
+  ]);
+  tray.setContextMenu(trayMenu);
+});
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "scripts/preload.js"),
+    },
+  });
+
+  const mainPagePath = path.join(__dirname, config.mainPage);
+  mainWindow.loadURL(`file://${mainPagePath}`);
+
+  mainWindow.on("closed", () => (mainWindow = null));
+}
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
 ```
 
-## Using GitHub Markdown
-If your courses use GitHub Markdown (`.md` files), you can convert them to HTML inside Electron using `marked.js`:
+---
 
-1. Install `marked`:
-   ```sh
-   npm install marked
-   ```
-2. Load and parse Markdown in your Electron renderer:
-   ```js
-   const fs = require('fs');
-   const path = require('path');
-   const marked = require('marked');
-   
-   const mdFilePath = path.join(__dirname, 'courses/course1.md');
-   fs.readFile(mdFilePath, 'utf8', (err, data) => {
-       if (!err) {
-           document.getElementById('content').innerHTML = marked.parse(data);
-       }
-   });
-   ```
+## 📄 mainpage.html (Course Page with Thumbnails)
 
-## Packaging the App
-To build your Electron app into a standalone executable:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Course Dashboard</title>
+    <script>
+        function openCourse(page) {
+            window.location.href = page;
+        }
+    </script>
+</head>
+<body>
+    <h1>Courses</h1>
+    <img src="assets/thumbnail.png" width="200" onclick="openCourse('pages/course1.html')" />
+    <img src="assets/thumbnail.png" width="200" onclick="openCourse('pages/course2.html')" />
+</body>
+</html>
+```
 
-1. Install Electron Packager:
-   ```sh
-   npm install -g electron-packager
-   ```
-2. Package the app:
-   ```sh
-   electron-packager . ElectronApp --platform=win32 --arch=x64
-   ```
-   (Modify `--platform` and `--arch` as needed for different OS)
+---
 
-## Notes
-- Ensure that all HTML file paths in `config.json` are relative to the project directory.
-- Use DevTools (`Ctrl+Shift+I`) in Electron to debug issues.
-- Keep your `config.json` flexible for dynamic content loading.
+## 🎯 Additional Electron Commands
 
-## Resources
-- [Electron Documentation](https://www.electronjs.org/docs)
-- [Node.js](https://nodejs.org/en/)
-- [Marked.js](https://github.com/markedjs/marked)
-- 
+### Build Electron App (Windows)
+```sh
+npx electron-packager . YourAppName --platform=win32 --arch=x64 --out=dist
+```
+
+### For Mac
+```sh
+npx electron-packager . YourAppName --platform=darwin --arch=x64 --out=dist
+```
+
+### For Linux
+```sh
+npx electron-packager . YourAppName --platform=linux --arch=x64 --out=dist
+```
+
+---
+
+### 🎉 Now your Electron app is ready! 🚀
+
